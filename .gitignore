@@ -1,0 +1,15 @@
+# Ignore folders
+subs/
+downloads/
+cookies/
+
+# Ignore database
+operations.db
+
+# Ignore environment config
+.env
+
+# Logs
+*.log
+__pycache__/
+cookies/

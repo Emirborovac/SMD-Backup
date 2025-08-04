@@ -1,0 +1,3 @@
+sudo systemctl status flask_app
+sudo systemctl restart flask_app
+sudo tail -f /home/root01/SMD/flask_app.log
