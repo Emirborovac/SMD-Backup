@@ -18,22 +18,18 @@ import uuid
 import subprocess
 from pathlib import Path
 
-# Setup subtitle-specific logging
+# Setup transcription logging (unified with transcribe_api.py)
 def setup_subtitle_logger():
-    """Setup dedicated logger for subtitle processing"""
-    logger = logging.getLogger('subtitle_processor')
+    """Setup dedicated logger for transcription operations"""
+    logger = logging.getLogger('transcription')
     logger.setLevel(logging.INFO)
     
     # Avoid duplicate handlers
     if logger.handlers:
         return logger
     
-    # Create logs directory if it doesn't exist
-    logs_dir = Path('logs')
-    logs_dir.mkdir(exist_ok=True)
-    
-    # Create file handler with timestamp
-    log_filename = logs_dir / f'subtitle_processing_{datetime.now().strftime("%Y%m%d")}.log'
+    # Create file handler for transcription_log (same as transcribe_api.py)
+    log_filename = 'transcription_log'
     file_handler = logging.FileHandler(log_filename, encoding='utf-8')
     file_handler.setLevel(logging.INFO)
     
@@ -153,14 +149,15 @@ MAX_OUTPUT_TOKENS = 30_400  # 32k with 5% safety margin
 CHUNK_SAFETY_TOKENS = 20_000  # Conservative chunk size for output safety
 
 # Transcription Functions (IDENTICAL logic from transcribe_api.py)
-def speechmatics_transcribe(file_path):
+def speechmatics_transcribe(file_path, source_language="auto"):
     """Send file to Speechmatics and get SRT"""
+    subtitle_logger.info(f"Starting transcription for {file_path.name} with source language: {source_language}")
     print(f"🎙️ Transcribing {file_path.name}...")
     
     config = {
         "type": "transcription",
         "transcription_config": {
-            "language": SOURCE_LANGUAGE,
+            "language": source_language,
             "diarization": "speaker",
             "operating_point": OPERATING_POINT
         },
@@ -184,24 +181,31 @@ def speechmatics_transcribe(file_path):
         response = requests.post('https://asr.api.speechmatics.com/v2/jobs', headers=headers, files=files)
         response.raise_for_status()
         job_id = response.json()['id']
+        subtitle_logger.info(f"Speechmatics job created: {job_id}")
         print(f"✅ Job created: {job_id}")
     
     # Wait for completion
+    subtitle_logger.info(f"Waiting for transcription completion (job: {job_id})")
     print("⏳ Waiting for transcription...")
     for attempt in range(60):
         response = requests.get(f'https://asr.api.speechmatics.com/v2/jobs/{job_id}', headers=headers)
         status = response.json()['job']['status']
         
         if status == 'done':
+            subtitle_logger.info(f"Transcription completed successfully (job: {job_id})")
             print("✅ Transcription completed!")
             break
         elif status == 'rejected':
-            raise Exception(f"Job rejected: {response.json()['job'].get('errors', 'Unknown error')}")
+            error_details = response.json()['job'].get('errors', 'Unknown error')
+            subtitle_logger.error(f"Transcription job rejected (job: {job_id}): {error_details}")
+            raise Exception(f"Job rejected: {error_details}")
         
         if attempt % 5 == 0:
+            subtitle_logger.info(f"Transcription status (job: {job_id}): {status}")
             print(f"Status: {status}")
         time.sleep(60)
     else:
+        subtitle_logger.error(f"Transcription timeout (job: {job_id})")
         raise Exception("Timeout waiting for transcription")
     
     # Download SRT
@@ -210,6 +214,7 @@ def speechmatics_transcribe(file_path):
     
     # Ensure proper UTF-8 decoding
     response.encoding = 'utf-8'
+    subtitle_logger.info(f"SRT downloaded successfully (job: {job_id})")
     return response.text
 
 def srt_to_json(srt_content):
@@ -1876,6 +1881,7 @@ def transcribe_audio():
     Parameters:
     - file: Audio/video file to transcribe (optional if url provided)
     - url: URL to audio/video to download and transcribe (optional if file provided)
+    - source_language: Source language of the audio (default: auto)
     - target_language: Language to translate to (default: Arabic)
     
     Returns:
@@ -1904,6 +1910,7 @@ def transcribe_audio():
     # Check for both file and URL parameters
     file = request.files.get('file')
     url = request.form.get('url')
+    source_language = request.form.get('source_language', 'auto')
     target_language = request.form.get('target_language', 'Arabic')
     
     # Must provide either file or URL
@@ -1936,7 +1943,7 @@ def transcribe_audio():
             "partial_failure": False
         }), 400
     
-    print(f"📝 Languages: {SOURCE_LANGUAGE} → {target_language}")
+    print(f"📝 Languages: {source_language} → {target_language}")
     print(f"🤖 AI Model: {CLAUDE_MODEL}")
     print(f"🔧 Config: {MAX_LINE_LENGTH} chars, {MAX_LINES} line(s), {OPERATING_POINT} mode")
     print("=" * 50)
@@ -1953,6 +1960,7 @@ def transcribe_audio():
     # Log subtitle processing start
     subtitle_logger.info(f"[{filename_base}] SUBTITLE PROCESSING STARTED")
     subtitle_logger.info(f"[{filename_base}] Source: {'URL' if url else 'File upload'}")
+    subtitle_logger.info(f"[{filename_base}] Source Language: {source_language}")
     subtitle_logger.info(f"[{filename_base}] Target Language: {target_language}")
     subtitle_logger.info(f"[{filename_base}] Config: {MAX_LINE_LENGTH} chars, {MAX_LINES} lines, {OPERATING_POINT} mode")
     
@@ -2018,7 +2026,7 @@ def transcribe_audio():
         subtitle_logger.info(f"[{filename_base}] Starting Speechmatics transcription")
         subtitle_logger.info(f"[{filename_base}] File size: {file_size_mb:.1f}MB, Source: {source_filename}")
         
-        srt_content = speechmatics_transcribe(temp_path)
+        srt_content = speechmatics_transcribe(temp_path, source_language)
         
         if not srt_content or not srt_content.strip():
             subtitle_logger.error(f"[{filename_base}] Transcription failed - empty response from Speechmatics")

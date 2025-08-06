@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 import uuid
 from datetime import datetime
+import logging
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.responses import JSONResponse
@@ -34,18 +35,46 @@ def load_env():
         exit(1)
     return config
 
+# Setup transcription logger
+def setup_transcription_logger():
+    """Setup dedicated logger for transcription operations"""
+    logger = logging.getLogger('transcription')
+    logger.setLevel(logging.INFO)
+    
+    # Avoid duplicate handlers
+    if logger.handlers:
+        return logger
+    
+    # Create file handler for transcription_log
+    log_filename = 'transcription_log'
+    file_handler = logging.FileHandler(log_filename, encoding='utf-8')
+    file_handler.setLevel(logging.INFO)
+    
+    # Create formatter
+    formatter = logging.Formatter(
+        '%(asctime)s | %(levelname)s | %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(formatter)
+    
+    logger.addHandler(file_handler)
+    return logger
+
+# Initialize transcription logger
+transcription_logger = setup_transcription_logger()
+
 # Load configuration
 CONFIG = load_env()
 SPEECHMATICS_API_KEY = CONFIG.get('SPEECHMATICS_API_KEY')
 CLAUDE_API_KEY = CONFIG.get('CLAUDE_API_KEY')
 CLAUDE_MODEL = CONFIG.get('CLAUDE_MODEL', 'claude-sonnet-4-20250514')
-SOURCE_LANGUAGE = CONFIG.get('SOURCE_LANGUAGE', 'auto')
 MAX_LINE_LENGTH = int(CONFIG.get('MAX_LINE_LENGTH', 37))
 MAX_LINES = int(CONFIG.get('MAX_LINES', 1))
 OPERATING_POINT = CONFIG.get('OPERATING_POINT', 'enhanced')
 
 # Validate required settings
 if not SPEECHMATICS_API_KEY or not CLAUDE_API_KEY:
+    transcription_logger.error("Missing API keys in .env file")
     print("❌ Missing API keys in .env file")
     exit(1)
 
@@ -63,14 +92,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
-def speechmatics_transcribe(file_path):
+def speechmatics_transcribe(file_path, source_language="auto"):
     """Send file to Speechmatics and get SRT"""
+    transcription_logger.info(f"Starting transcription for {file_path.name} with source language: {source_language}")
     print(f"🎙️ Transcribing {file_path.name}...")
     
     config = {
         "type": "transcription",
         "transcription_config": {
-            "language": SOURCE_LANGUAGE,
+            "language": source_language,
             "diarization": "speaker",
             "operating_point": OPERATING_POINT
         },
@@ -94,30 +124,38 @@ def speechmatics_transcribe(file_path):
         response = requests.post('https://asr.api.speechmatics.com/v2/jobs', headers=headers, files=files)
         response.raise_for_status()
         job_id = response.json()['id']
+        transcription_logger.info(f"Speechmatics job created: {job_id}")
         print(f"✅ Job created: {job_id}")
     
     # Wait for completion
+    transcription_logger.info(f"Waiting for transcription completion (job: {job_id})")
     print("⏳ Waiting for transcription...")
     for attempt in range(60):
         response = requests.get(f'https://asr.api.speechmatics.com/v2/jobs/{job_id}', headers=headers)
         status = response.json()['job']['status']
         
         if status == 'done':
+            transcription_logger.info(f"Transcription completed successfully (job: {job_id})")
             print("✅ Transcription completed!")
             break
         elif status == 'rejected':
-            raise Exception(f"Job rejected: {response.json()['job'].get('errors', 'Unknown error')}")
+            error_details = response.json()['job'].get('errors', 'Unknown error')
+            transcription_logger.error(f"Transcription job rejected (job: {job_id}): {error_details}")
+            raise Exception(f"Job rejected: {error_details}")
         
         if attempt % 5 == 0:
+            transcription_logger.info(f"Transcription status (job: {job_id}): {status}")
             print(f"Status: {status}")
         time.sleep(60)
     else:
+        transcription_logger.error(f"Transcription timeout (job: {job_id})")
         raise Exception("Timeout waiting for transcription")
     
     # Download SRT
     response = requests.get(f'https://asr.api.speechmatics.com/v2/jobs/{job_id}/transcript?format=srt', headers=headers)
     response.raise_for_status()
     
+    transcription_logger.info(f"SRT downloaded successfully (job: {job_id})")
     return response.text
 
 def srt_to_json(srt_content):
@@ -519,6 +557,7 @@ def translate_with_claude(subtitle_json, target_language):
 @app.post("/transcribe")
 async def transcribe_audio(
     file: UploadFile = File(...),
+    source_language: str = Form(default="auto"),
     target_language: str = Form(default="Arabic")
 ):
     """
@@ -526,6 +565,7 @@ async def transcribe_audio(
     
     Parameters:
     - file: Audio/video file to transcribe
+    - source_language: Source language of the audio (default: auto)
     - target_language: Language to translate to (default: Arabic)
     
     Returns:
@@ -538,9 +578,10 @@ async def transcribe_audio(
     - segments_translated: int - Number of segments successfully translated
     """
     
+    transcription_logger.info(f"TRANSCRIBE API - New request: source={source_language}, target={target_language}, file={file.filename}")
     print("🚀 TRANSCRIBE API - Processing request")
     print("=" * 50)
-    print(f"📝 Languages: {SOURCE_LANGUAGE} → {target_language}")
+    print(f"📝 Languages: {source_language} → {target_language}")
     print(f"🤖 AI Model: {CLAUDE_MODEL}")
     print(f"🔧 Config: {MAX_LINE_LENGTH} chars, {MAX_LINES} line(s), {OPERATING_POINT} mode")
     print("=" * 50)
@@ -578,9 +619,10 @@ async def transcribe_audio(
     try:
         # Step 1: Transcribe with Speechmatics
         print("🎙️ Starting transcription...")
-        srt_content = speechmatics_transcribe(temp_path)
+        srt_content = speechmatics_transcribe(temp_path, source_language)
         
         if not srt_content or not srt_content.strip():
+            transcription_logger.error(f"Empty response from Speechmatics for {filename_base}")
             return JSONResponse(
                 status_code=500,
                 content={
@@ -592,12 +634,14 @@ async def transcribe_audio(
                 }
             )
         
+        transcription_logger.info(f"Transcription completed successfully for {filename_base}")
         print("✅ Transcription completed successfully")
         
         # Save original SRT file
         original_srt_path = subs_dir / f"{filename_base}_original.srt"
         with open(original_srt_path, 'w', encoding='utf-8') as f:
             f.write(srt_content)
+        transcription_logger.info(f"Saved original SRT: {original_srt_path}")
         print(f"💾 Saved original SRT: {original_srt_path}")
         
         # Step 2: Convert to JSON
@@ -699,7 +743,7 @@ async def root():
         "version": "1.0.0",
         "status": "online",
         "config": {
-            "source_language": SOURCE_LANGUAGE,
+            "source_language": "Set per request (default: auto)",
             "target_language": "Set per request (default: Arabic)",
             "max_line_length": MAX_LINE_LENGTH,
             "max_lines": MAX_LINES,
@@ -715,12 +759,15 @@ async def health_check():
 
 if __name__ == "__main__":
     try:
+        transcription_logger.info("Starting Transcribe API Server...")
         print("🚀 Starting Transcribe API Server...")
-        print(f"📝 Source Language: {SOURCE_LANGUAGE} (target language set per request)")
+        print(f"📝 Languages: Source and target set per request (defaults: auto → Arabic)")
         print(f"🤖 AI Model: {CLAUDE_MODEL}")
+        print(f"📋 Logging: All transcription operations logged to transcription_log")
         print("📡 About to start uvicorn server...")
         uvicorn.run("transcribe_api:app", host="0.0.0.0", port=8000, reload=True)
     except Exception as e:
+        transcription_logger.error(f"Server failed to start: {e}")
         print(f"❌ Server failed to start: {e}")
         import traceback
         traceback.print_exc() 

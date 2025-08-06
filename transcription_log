@@ -1,0 +1,59 @@
+2025-08-06 15:03:18 | INFO | [20250806_150318_834482b9] SUBTITLE PROCESSING STARTED
+2025-08-06 15:03:18 | INFO | [20250806_150318_834482b9] Source: File upload
+2025-08-06 15:03:18 | INFO | [20250806_150318_834482b9] Source Language: Arabic
+2025-08-06 15:03:18 | INFO | [20250806_150318_834482b9] Target Language: English
+2025-08-06 15:03:18 | INFO | [20250806_150318_834482b9] Config: 70 chars, 1 lines, enhanced mode
+2025-08-06 15:03:18 | INFO | [20250806_150318_834482b9] Starting Speechmatics transcription
+2025-08-06 15:03:18 | INFO | [20250806_150318_834482b9] File size: 9.8MB, Source: t.mp4
+2025-08-06 15:03:18 | INFO | Starting transcription for tmpzmna4_5n.mp4 with source language: Arabic
+2025-08-06 15:03:18 | ERROR | [20250806_150318_834482b9] TRANSCRIPTION FAILED: Transcription failed: 400 Client Error: Bad Request for url: https://asr.api.speechmatics.com/v2/jobs
+2025-08-06 15:07:59 | INFO | [20250806_150759_e0b914f8] SUBTITLE PROCESSING STARTED
+2025-08-06 15:07:59 | INFO | [20250806_150759_e0b914f8] Source: File upload
+2025-08-06 15:07:59 | INFO | [20250806_150759_e0b914f8] Source Language: en
+2025-08-06 15:07:59 | INFO | [20250806_150759_e0b914f8] Target Language: English
+2025-08-06 15:07:59 | INFO | [20250806_150759_e0b914f8] Config: 70 chars, 1 lines, enhanced mode
+2025-08-06 15:07:59 | INFO | [20250806_150759_e0b914f8] Starting Speechmatics transcription
+2025-08-06 15:07:59 | INFO | [20250806_150759_e0b914f8] File size: 9.8MB, Source: t.mp4
+2025-08-06 15:07:59 | INFO | Starting transcription for tmpqxejghdg.mp4 with source language: en
+2025-08-06 15:08:00 | INFO | Speechmatics job created: hcxpq53gl3
+2025-08-06 15:08:00 | INFO | Waiting for transcription completion (job: hcxpq53gl3)
+2025-08-06 15:08:00 | INFO | Transcription status (job: hcxpq53gl3): running
+2025-08-06 15:09:00 | INFO | Transcription completed successfully (job: hcxpq53gl3)
+2025-08-06 15:09:00 | INFO | SRT downloaded successfully (job: hcxpq53gl3)
+2025-08-06 15:09:00 | INFO | [20250806_150759_e0b914f8] Transcription completed successfully
+2025-08-06 15:09:00 | INFO | [20250806_150759_e0b914f8] Starting Claude translation to English
+2025-08-06 15:09:00 | INFO | [20250806_150759_e0b914f8] Segments to translate: 4
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] Claude Response - Success: True, Segments: 4
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] Claude Comment: 
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] First 20 words: I don't know.
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] Starting post-processing (splitting + timing redistribution)
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] Applied original text redistribution
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] Post-processing completed successfully
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] PIPELINE COMPLETED SUCCESSFULLY
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] Final stats: 4 → 4 segments
+2025-08-06 15:09:02 | INFO | [20250806_150759_e0b914f8] Files created: original SRT, translated SRT
+2025-08-06 15:17:20 | INFO | [20250806_151720_e85d2467] SUBTITLE PROCESSING STARTED
+2025-08-06 15:17:20 | INFO | [20250806_151720_e85d2467] Source: URL
+2025-08-06 15:17:20 | INFO | [20250806_151720_e85d2467] Source Language: auto
+2025-08-06 15:17:20 | INFO | [20250806_151720_e85d2467] Target Language: Turkish
+2025-08-06 15:17:20 | INFO | [20250806_151720_e85d2467] Config: 70 chars, 1 lines, enhanced mode
+2025-08-06 15:17:20 | INFO | [20250806_151720_e85d2467] Starting Speechmatics transcription
+2025-08-06 15:17:20 | INFO | [20250806_151720_e85d2467] File size: 9.0MB, Source: cutted_video_1754493439_4e8e1427
+2025-08-06 15:17:20 | INFO | Starting transcription for ekteb-01_s3_eu-central-1_amazonaws_com_cutted_video_1754493439_4e8e1427.mp4_7482a581.mp4 with source language: auto
+2025-08-06 15:17:21 | INFO | Speechmatics job created: a62rucqc1f
+2025-08-06 15:17:21 | INFO | Waiting for transcription completion (job: a62rucqc1f)
+2025-08-06 15:17:21 | INFO | Transcription status (job: a62rucqc1f): running
+2025-08-06 15:18:21 | INFO | Transcription completed successfully (job: a62rucqc1f)
+2025-08-06 15:18:21 | INFO | SRT downloaded successfully (job: a62rucqc1f)
+2025-08-06 15:18:21 | INFO | [20250806_151720_e85d2467] Transcription completed successfully
+2025-08-06 15:18:21 | INFO | [20250806_151720_e85d2467] Starting Claude translation to Turkish
+2025-08-06 15:18:21 | INFO | [20250806_151720_e85d2467] Segments to translate: 6
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] Claude Response - Success: True, Segments: 6
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] Claude Comment: 
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] First 20 words: Köpekler üzerimize saldırdı ve bizi tehdit etti, belediye ve Yahudiler ve her şey, ev yıkıldı.
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] Starting post-processing (splitting + timing redistribution)
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] Applied original text redistribution
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] Post-processing completed successfully
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] PIPELINE COMPLETED SUCCESSFULLY
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] Final stats: 6 → 6 segments
+2025-08-06 15:18:28 | INFO | [20250806_151720_e85d2467] Files created: original SRT, translated SRT
